@@ -84,6 +84,8 @@ const uint8_t DISPLAY_LOG_ROWS = 32;           // Number of lines in display log
 #define D_CMND_DISP_SETLED "SetLED"
 #define D_CMND_DISP_BUTTONS "Buttons"
 #define D_CMND_DISP_SCROLLTEXT "ScrollText"
+#define D_CMND_DISP_ILIMODE "ILIMode"
+#define D_CMND_DISP_ILIINVERT "Invert"
 #define	D_CMND_DISP_SLEEP	"Sleep"
 
 enum XdspFunctions { FUNC_DISPLAY_INIT_DRIVER, FUNC_DISPLAY_INIT, FUNC_DISPLAY_EVERY_50_MSECOND, FUNC_DISPLAY_EVERY_SECOND,
@@ -118,7 +120,7 @@ const char kDisplayCommands[] PROGMEM = D_PRFX_DISPLAY "|"  // Prefix
    "|" D_CMND_DISP_CLEAR "|" D_CMND_DISP_NUMBER "|" D_CMND_DISP_FLOAT "|" D_CMND_DISP_NUMBERNC "|" D_CMND_DISP_FLOATNC "|"
   D_CMND_DISP_BRIGHTNESS "|" D_CMND_DISP_RAW "|" D_CMND_DISP_LEVEL "|" D_CMND_DISP_SEVENSEG_TEXT "|" D_CMND_DISP_SEVENSEG_TEXTNC "|"
   D_CMND_DISP_SCROLLDELAY "|" D_CMND_DISP_CLOCK "|" D_CMND_DISP_TEXTNC "|" D_CMND_DISP_SETLEDS "|" D_CMND_DISP_SETLED "|"
-  D_CMND_DISP_BUTTONS "|" D_CMND_DISP_SCROLLTEXT
+  D_CMND_DISP_BUTTONS "|" D_CMND_DISP_SCROLLTEXT "|" D_CMND_DISP_ILIMODE "|" D_CMND_DISP_ILIINVERT
 #ifdef USE_TOUCH_BUTTONS
 	"|" D_CMND_DISP_SLEEP
 #endif
@@ -134,7 +136,7 @@ void (* const DisplayCommand[])(void) PROGMEM = {
   , &CmndDisplayClear, &CmndDisplayNumber, &CmndDisplayFloat, &CmndDisplayNumberNC, &CmndDisplayFloatNC,
   &CmndDisplayBrightness, &CmndDisplayRaw, &CmndDisplayLevel, &CmndDisplaySevensegText, &CmndDisplaySevensegTextNC,
   &CmndDisplayScrollDelay, &CmndDisplayClock, &CmndDisplayTextNC, &CmndDisplaySetLEDs, &CmndDisplaySetLED,
-  &CmndDisplayButtons, &CmndDisplayScrollText
+  &CmndDisplayButtons, &CmndDisplayScrollText,  &CmndDisplayILIMOde ,  &CmndDisplayILIInvert
 #ifdef USE_TOUCH_BUTTONS
   ,&CmndDisplaySleep
 #endif
@@ -1947,10 +1949,29 @@ void CmndDisplayFont(void)
   ResponseCmndNumber(Settings.display_font);
 }
 
+
+void CmndDisplayILIMOde(void)
+{
+  if ((XdrvMailbox.payload >= 1) && (XdrvMailbox.payload < 16)) {
+    Settings.display_options.ilimode = XdrvMailbox.payload;
+    TasmotaGlobal.restart_flag = 2;
+  }
+  ResponseCmndNumber(Settings.display_options.ilimode);
+}
+
+void CmndDisplayILIInvert(void)
+{
+  if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload <= 1)) {
+    Settings.display_options.Invert = XdrvMailbox.payload;
+    if (renderer) renderer->invertDisplay(Settings.display_options.Invert);
+  }
+  ResponseCmndNumber(Settings.display_options.Invert);
+}
+
 void CmndDisplayRotate(void)
 {
   if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload < 4)) {
-    if (Settings.display_rotate != XdrvMailbox.payload) {
+    if ((Settings.display_rotate) != XdrvMailbox.payload) {
 /*
       // Needs font info regarding height and width
       if ((Settings.display_rotate &1) != (XdrvMailbox.payload &1)) {
@@ -2060,6 +2081,7 @@ char ppath[16];
   Draw_RGB_Bitmap(ppath, xp, yp, inverted);
 }
 #endif
+
 
 #ifdef ESP32
 #ifdef JPEG_PICTS
@@ -2698,7 +2720,7 @@ uint8_t rbutt=0;
 uint8_t vbutt=0;
 
 
-  if (touchp->touched()) {
+    if (touchp->touched()) {
     // did find a hit
 #if defined(USE_FT5206)
     pLoc = touchp->getPoint(0);
@@ -2708,6 +2730,7 @@ uint8_t vbutt=0;
     if (renderer) {
 
       rotconvert(&pLoc.x, &pLoc.y);
+	  
 	  // Check if need to wakeup
 	  if (Settings.display_sleep) {
 		  ms_since_last_touch = millis();
@@ -2723,6 +2746,7 @@ uint8_t vbutt=0;
 			}
 		  }
 	 }
+
 #ifdef USE_M5STACK_CORE2
       // handle  3 built in touch buttons
       uint16_t xcenter = 80;
@@ -2742,7 +2766,6 @@ uint8_t vbutt=0;
         xcenter += 100;
       }
 #endif
-
 
       // AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("touch after convert %d - %d"), pLoc.x, pLoc.y);
       // now must compare with defined buttons

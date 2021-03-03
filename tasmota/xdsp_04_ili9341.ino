@@ -127,6 +127,7 @@ void ILI9341_InitDriver()
     Ili9341InitMode();
 #endif  // USE_DISPLAY_MODES1TO5
 
+#ifdef USE_TOUCH_BUTTONS
 #ifdef ESP32
 #ifdef USE_FT5206
     // start digitizer with fixed adress and pins for esp32
@@ -142,13 +143,14 @@ void ILI9341_InitDriver()
 #ifdef USE_XPT2046
 	Touch_Init(Pin(GPIO_XPT2046_CS));
 #endif
+#endif
 
-    tft_init_done = true;
 #ifdef USE_DISPLAY_ILI9341
     AddLog(LOG_LEVEL_INFO, PSTR("DSP: ILI9341"));
 #else
     AddLog(LOG_LEVEL_INFO, PSTR("DSP: ILI9342"));
 #endif
+    tft_init_done = true;
   }
 }
 
@@ -224,7 +226,7 @@ int16_t temp;
         *x = renderer->height() - temp;
         break;
     }
-    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(" TS: after convert x:%d / y:%d  screen r:%d / w:%d / h:%d"), *x, *y,rot,renderer->width(),renderer->height());
+    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(" TS: x:%d / y:%d / z:%d"), *x, *y, *z);
   }
 }
 #endif

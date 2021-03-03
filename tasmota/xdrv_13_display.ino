@@ -34,6 +34,8 @@ enum ColorType { COLOR_BW, COLOR_COLOR };
 
 #ifdef USE_TOUCH_BUTTONS
 VButton *buttons[MAX_TOUCH_BUTTONS];
+uint32_t	ms_since_last_touch = millis();
+uint32_t	ms_since_wakeup = ms_since_last_touch;
 #endif
 
 // drawing color is WHITE
@@ -82,8 +84,7 @@ const uint8_t DISPLAY_LOG_ROWS = 32;           // Number of lines in display log
 #define D_CMND_DISP_SETLED "SetLED"
 #define D_CMND_DISP_BUTTONS "Buttons"
 #define D_CMND_DISP_SCROLLTEXT "ScrollText"
-
-
+#define	D_CMND_DISP_SLEEP	"Sleep"
 
 enum XdspFunctions { FUNC_DISPLAY_INIT_DRIVER, FUNC_DISPLAY_INIT, FUNC_DISPLAY_EVERY_50_MSECOND, FUNC_DISPLAY_EVERY_SECOND,
                      FUNC_DISPLAY_MODEL, FUNC_DISPLAY_MODE, FUNC_DISPLAY_POWER,
@@ -100,6 +101,9 @@ enum XdspFunctions { FUNC_DISPLAY_INIT_DRIVER, FUNC_DISPLAY_INIT, FUNC_DISPLAY_E
                      FUNC_DISPLAY_BRIGHTNESS, FUNC_DISPLAY_RAW, FUNC_DISPLAY_LEVEL, FUNC_DISPLAY_SEVENSEG_TEXT, FUNC_DISPLAY_SEVENSEG_TEXTNC,
                      FUNC_DISPLAY_SCROLLDELAY, FUNC_DISPLAY_CLOCK, FUNC_DISPLAY_SETLEDS, FUNC_DISPLAY_SETLED,
                      FUNC_DISPLAY_BUTTONS, FUNC_DISPLAY_SCROLLTEXT
+#ifdef USE_TOUCH_BUTTONS
+					, FUNC_DISPLAY_SLEEP
+#endif
                    };
 
 enum DisplayInitModes { DISPLAY_INIT_MODE, DISPLAY_INIT_PARTIAL, DISPLAY_INIT_FULL };
@@ -115,7 +119,10 @@ const char kDisplayCommands[] PROGMEM = D_PRFX_DISPLAY "|"  // Prefix
   D_CMND_DISP_BRIGHTNESS "|" D_CMND_DISP_RAW "|" D_CMND_DISP_LEVEL "|" D_CMND_DISP_SEVENSEG_TEXT "|" D_CMND_DISP_SEVENSEG_TEXTNC "|"
   D_CMND_DISP_SCROLLDELAY "|" D_CMND_DISP_CLOCK "|" D_CMND_DISP_TEXTNC "|" D_CMND_DISP_SETLEDS "|" D_CMND_DISP_SETLED "|"
   D_CMND_DISP_BUTTONS "|" D_CMND_DISP_SCROLLTEXT
-  ;
+#ifdef USE_TOUCH_BUTTONS
+	"|" D_CMND_DISP_SLEEP
+#endif
+;
 
 void (* const DisplayCommand[])(void) PROGMEM = {
   &CmndDisplay, &CmndDisplayModel, &CmndDisplayWidth, &CmndDisplayHeight, &CmndDisplayMode, &CmndDisplayRefresh,
@@ -128,6 +135,9 @@ void (* const DisplayCommand[])(void) PROGMEM = {
   &CmndDisplayBrightness, &CmndDisplayRaw, &CmndDisplayLevel, &CmndDisplaySevensegText, &CmndDisplaySevensegTextNC,
   &CmndDisplayScrollDelay, &CmndDisplayClock, &CmndDisplayTextNC, &CmndDisplaySetLEDs, &CmndDisplaySetLED,
   &CmndDisplayButtons, &CmndDisplayScrollText
+#ifdef USE_TOUCH_BUTTONS
+  ,&CmndDisplaySleep
+#endif
 };
 
 char *dsp_str;
@@ -1716,6 +1726,16 @@ void CmndDisplayMode(void)
   ResponseCmndNumber(Settings.display_mode);
 }
 
+#ifdef USE_TOUCH_BUTTONS
+void CmndDisplaySleep(void)
+{
+  if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload <= 32767)) {
+    Settings.display_sleep = XdrvMailbox.payload;
+  }
+  ResponseCmndNumber(Settings.display_sleep);
+}
+#endif
+
 void CmndDisplayDimmer(void)
 {
   if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload <= 100)) {
@@ -2665,6 +2685,12 @@ void Touch_RDW_BUTT(uint32_t count, uint32_t pwr) {
 uint8_t tbstate[3];
 #endif
 
+void Clear_pLoc(int16_t *x, int16_t *y, int16_t *z) {
+    x = 0;
+    y = 0;
+    z = 0;
+}
+
 // check digitizer hit
 void Touch_Check(void(*rotconvert)(int16_t *x, int16_t *y)) {
 uint16_t temp;
@@ -2682,7 +2708,21 @@ uint8_t vbutt=0;
     if (renderer) {
 
       rotconvert(&pLoc.x, &pLoc.y);
-
+	  // Check if need to wakeup
+	  if (Settings.display_sleep) {
+		  ms_since_last_touch = millis();
+		  if (!disp_power) {
+			DisplayOnOff(1);
+			Clear_pLoc(&pLoc.x, &pLoc.y, &pLoc.z);
+			ms_since_wakeup = ms_since_last_touch;
+			return;			// Do not press a button when been just woken up
+		  } else {
+			if (ms_since_last_touch - ms_since_wakeup < 1000) {
+				Clear_pLoc(&pLoc.x, &pLoc.y, &pLoc.z);
+				return;
+			}
+		  }
+	 }
 #ifdef USE_M5STACK_CORE2
       // handle  3 built in touch buttons
       uint16_t xcenter = 80;
@@ -2774,6 +2814,7 @@ uint8_t vbutt=0;
               if (buttons[count]->vpower.is_pushbutton) {
                 // push button
                 buttons[count]->vpower.on_off = 0;
+//				  No need to publish "OFF" state for PBT
 //                Touch_MQTT(count,"PBT", buttons[count]->vpower.on_off);
                 buttons[count]->xdrawButton(buttons[count]->vpower.on_off);
               }
@@ -2791,8 +2832,10 @@ uint8_t vbutt=0;
         }
       }
     }
-    pLoc.x = 0;
-    pLoc.y = 0;
+	Clear_pLoc(&pLoc.x, &pLoc.y, &pLoc.z);
+
+	if (Settings.display_sleep && disp_power && (millis() - ms_since_last_touch > Settings.display_sleep * 1000))
+		DisplayOnOff(0);	// Switch the display Off when not touched for more than X
   }
 }
 

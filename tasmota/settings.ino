@@ -1007,6 +1007,7 @@ void SettingsDefaultSet2(void) {
   Settings.display_dimmer = 1;
   Settings.display_size = 1;
   Settings.display_font = 1;
+  Settings.display_sleep = 0;
 //  Settings.display_rotate = 0;
   Settings.display_address[0] = MTX_ADDRESS1;
   Settings.display_address[1] = MTX_ADDRESS2;

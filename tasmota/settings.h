@@ -375,8 +375,9 @@ struct {
   uint8_t       param[PARAM8_SIZE];        // 2FC  SetOption32 .. SetOption49
   int16_t       toffset[2];                // 30E
   uint8_t       display_font;              // 312
+  uint16_t      display_sleep;             // 313
 
-  uint8_t       free_313[44];              // 313
+  uint8_t       free_315[41];              // 315
 
   uint8_t       tuyamcu_topic;             // 33F  Manage tuyaSend topic. ex_energy_power_delta on 6.6.0.20, replaced on 8.5.0.1
   uint16_t      domoticz_update_timer;     // 340
@@ -649,6 +650,7 @@ struct {
   uint32_t      i2c_drivers[3];            // FEC  I2cDriver
   uint32_t      cfg_timestamp;             // FF8
   uint32_t      cfg_crc32;                 // FFC
+
 } Settings;
 
 typedef struct {
@@ -656,6 +658,7 @@ typedef struct {
   uint8_t       fast_reboot_count;         // 282
   uint8_t       free_003[1];               // 283
 } TRtcReboot;
+
 TRtcReboot RtcReboot;
 #ifdef ESP32
 RTC_NOINIT_ATTR TRtcReboot RtcDataReboot;

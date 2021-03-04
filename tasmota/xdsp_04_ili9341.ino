@@ -189,7 +189,8 @@ void TS_RotConvert(int16_t *x, int16_t *y) {
 int16_t temp;
   if (renderer) {
     uint8_t rot = renderer->getRotation();
-//    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(" TS: before convert x:%d / y:%d  screen r:%d / w:%d / h:%d"), *x, *y,rot,renderer->width(),renderer->height());
+//	To get 	XPT2046_MIN/MAX enable Logging line bellow and DisplayText [zr240:320]
+    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(" TS: raw x:%d / y:%d  screen r:%d / w:%d / h:%d"), *x, *y,rot,renderer->width(),renderer->height());
 	temp = map(*x,XPT2046_MINX,XPT2046_MAXX, renderer->height(), 0);
 	*x = map(*y,XPT2046_MINY,XPT2046_MAXY, renderer->width(), 0);
 	*y = temp;
@@ -211,7 +212,7 @@ int16_t temp;
         *x = renderer->height() - temp;
         break;
     }
-    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(" TS: x:%d / y:%d / z:%d"), *x, *y, *z);
+    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(" TS: x:%d / y:%d"), *x, *y);
   }
 }
 #endif

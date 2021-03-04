@@ -190,7 +190,7 @@ int16_t temp;
   if (renderer) {
     uint8_t rot = renderer->getRotation();
 //	To get 	XPT2046_MIN/MAX enable Logging line bellow and DisplayText [zr240:320]
-    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(" TS: raw x:%d / y:%d  screen r:%d / w:%d / h:%d"), *x, *y,rot,renderer->width(),renderer->height());
+//    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(" TS: raw x:%d / y:%d  screen r:%d / w:%d / h:%d"), *x, *y,rot,renderer->width(),renderer->height());
 	temp = map(*x,XPT2046_MINX,XPT2046_MAXX, renderer->height(), 0);
 	*x = map(*y,XPT2046_MINY,XPT2046_MAXY, renderer->width(), 0);
 	*y = temp;

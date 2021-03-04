@@ -34,8 +34,8 @@ enum ColorType { COLOR_BW, COLOR_COLOR };
 
 #ifdef USE_TOUCH_BUTTONS
 VButton *buttons[MAX_TOUCH_BUTTONS];
-uint32_t	ms_since_last_touch = millis();
-uint32_t	ms_since_wakeup = ms_since_last_touch;
+uint32_t	ms_since_wakeup = millis();
+uint32_t	ms_since_last_touch = ms_since_wakeup - 1000;
 #endif
 
 // drawing color is WHITE
@@ -1637,6 +1637,8 @@ void DisplaySetPower(void)
   disp_power = bitRead(XdrvMailbox.index, disp_device -1);
 
 //AddLog(LOG_LEVEL_DEBUG, PSTR("DSP: Power %d"), disp_power);
+  if (disp_power)
+	  ms_since_last_touch = millis();
 
   if (Settings.display_model) {
     if (!renderer) {

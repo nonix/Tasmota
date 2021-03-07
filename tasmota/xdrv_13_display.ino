@@ -2198,6 +2198,11 @@ void Draw_RGB_Bitmap(char *file,uint16_t xp, uint16_t yp, bool inverted ) {
 #endif // ESP32
   }
 }
+#else
+// This is just my workaround, if UFS not defined, perhaps not most optimal
+void Draw_RGB_Bitmap(char *file,uint16_t xp, uint16_t yp, bool inverted ) {
+	return;
+}
 #endif // USE_UFILESYS
 
 #ifdef USE_AWATCH
